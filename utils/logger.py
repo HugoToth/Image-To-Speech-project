@@ -4,7 +4,7 @@ import sys
 
 def setup_logger(name: str = __name__, level: int = logging.INFO) -> logging.Logger:
     """
-    Set up and return a logger with simple console output (no timestamp).
+    Set up and return a logger with simple console output.
     
     :param name: Logger name
     :param level: Logging level

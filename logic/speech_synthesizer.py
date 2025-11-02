@@ -5,10 +5,11 @@ from gtts import gTTS
 from playsound import playsound
 from PyQt6.QtCore import QThread, pyqtSignal
 from utils.logger import setup_logger
+import config
 
 logger = setup_logger(__name__)
 
-# --- HELPER FUNCTION 1: INTERNET CHECK ---
+# --- Helper function: INTERNET CHECK ---
 
 def check_internet_connection():
     """
@@ -16,15 +17,14 @@ def check_internet_connection():
     :return: True if connected, False otherwise.
     """
     try:
-        # We use a short timeout (3s) to avoid long waits
-        requests.get("https://www.google.com", timeout=3)
+        requests.get(config.INTERNET_CHECK_URL, timeout=config.INTERNET_CHECK_TIMEOUT)
         logger.info("Internet connection found")
         return True
     except (requests.ConnectionError, requests.Timeout):
         logger.info("No internet connection")
         return False
 
-# --- HELPER FUNCTION 2: GET LOCAL VOICES ---
+# --- Helper function: GET LOCAL VOICES ---
 
 def get_local_voices():
     """
@@ -47,7 +47,7 @@ def get_local_voices():
         logger.error(f"Error getting local voice list: {e}")
         return []
 
-# --- HELPER FUNCTION 3: GET CLOUD LANGUAGES ---
+# --- Helper function: GET CLOUD LANGUAGES ---
 
 def get_cloud_languages():
     """
@@ -80,7 +80,6 @@ class LocalSpeechWorker(QThread):
         self.text_to_speak = text_to_speak
         self.voice_id = voice_id
         self.engine = None
-        self._should_stop = False
 
     def run(self):
         try:
@@ -88,7 +87,7 @@ class LocalSpeechWorker(QThread):
             self.engine = pyttsx3.init()
             if self.voice_id:
                 self.engine.setProperty('voice', self.voice_id)
-            self.engine.setProperty('rate', 150)
+            self.engine.setProperty('rate', config.DEFAULT_SPEECH_RATE)
             self.engine.say(self.text_to_speak)
             self.engine.runAndWait()
             logger.info("Local speech synthesis completed")
@@ -103,15 +102,6 @@ class LocalSpeechWorker(QThread):
                 except:
                     pass
             self.finished.emit()
-
-    def stop(self):
-        """Stop the speech playback."""
-        self._should_stop = True
-        if self.engine:
-            try:
-                self.engine.stop()
-            except:
-                pass
 
 # --- WORKER 2: CLOUD (ONLINE) TTS ---
 
@@ -129,26 +119,19 @@ class CloudSpeechWorker(QThread):
         self.lang_code = lang_code
         # Define a temp file name. It will be created and deleted.
         self.temp_audio_file = "temp_speech.mp3"
-        self._should_stop = False
 
     def run(self):
         try:
-            if self._should_stop:
-                return
-            
             logger.info(f"Starting cloud speech synthesis (lang: {self.lang_code})")
             
-            # 1. Create the gTTS object
+            # Create the gTTS object
             tts = gTTS(text=self.text_to_speak, lang=self.lang_code, slow=False)
-            
-            # 2. Save the speech to a temporary file
+
+            # Save the speech to a temporary file
             tts.save(self.temp_audio_file)
             logger.info(f"Audio saved to {self.temp_audio_file}")
-            
-            if self._should_stop:
-                return
-            
-            # 3. Play the temporary file (this is blocking)
+
+            # Play the temporary file (this is blocking)
             logger.info("Playing audio...")
             playsound(self.temp_audio_file)
             logger.info("Cloud speech synthesis completed")
@@ -158,7 +141,7 @@ class CloudSpeechWorker(QThread):
             logger.error(error_msg)
             self.error.emit(error_msg)
         finally:
-            # 4. Clean up: Delete the temporary file
+            # Clean up: Delete the temporary file
             try:
                 if os.path.exists(self.temp_audio_file):
                     os.remove(self.temp_audio_file)
@@ -166,12 +149,5 @@ class CloudSpeechWorker(QThread):
             except Exception as e:
                 logger.warning(f"Failed to delete temp file: {e}")
                 
-            # 5. Signal that we are done
+            # Signal that we are done
             self.finished.emit()
-
-    def stop(self):
-        """Stop the speech playback."""
-        logger.info("Stopping cloud speech playback")
-        self._should_stop = True
-        # Note: playsound doesn't have a simple .stop()
-        # The playback will finish the current audio

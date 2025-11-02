@@ -5,7 +5,7 @@ TESSERACT_LANGUAGES = 'eng+deu+fra+ita+fin+ron+spa+swe'
 IMAGE_CONTRAST_FACTOR = 2.0
 
 # Speech Settings
-DEFAULT_SPEECH_RATE = 150
+DEFAULT_SPEECH_RATE = 200
 INTERNET_CHECK_URL = "https://www.google.com"
 INTERNET_CHECK_TIMEOUT = 3
 
@@ -16,4 +16,3 @@ IMAGE_DISPLAY_MIN_HEIGHT = 300
 
 # File Settings
 SUPPORTED_IMAGE_FORMATS = "Image Files (*.png *.jpg *.jpeg *.bmp *.tiff)"
-TEMP_AUDIO_PREFIX = "speech_"
